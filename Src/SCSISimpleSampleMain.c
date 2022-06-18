@@ -9,20 +9,12 @@
  * Macintosh system.
  */
 #define EXTERN
-#include	"SCSISimpleSample.h"
-#include	<Packages.h>
-#include	<Desk.h>
-#include	<OSEvents.h>
+#include "SCSISimpleSample.h"
+#include <Packages.h>
+#include <Menus.h>
+#include <Devices.h>
+#include <Events.h>
 #pragma segment MainCode
-
-#ifdef __powerc
-/*
- * Power PC does not automatically define the QuickDraw globals. This is because
- * only "application" code-fragments need these globals, and this cannot be
- * determined before the code fragment is constructed.
- */
-QDGlobals			qd;		/* This is not automatically defined on PowerPC		*/
-#endif
 
 void								main(void);
 void								EventLoop(void);
@@ -378,7 +370,7 @@ DoCommand(
 			if (menuItem == kAppleAbout)
 				DoAbout();
 			else {
-				GetItem(gAppleMenu, menuItem, menuText);
+				GetMenuItemText(gAppleMenu, menuItem, menuText);
 				AdjustEditMenu(TRUE);
 				GetPort(&savePort);
 				OpenDeskAcc(menuText);
@@ -522,14 +514,14 @@ SetupMenus()
 		 */
 		menuBarHdl = GetNewMBar(MBAR_MenuBar);
 		SetMenuBar(menuBarHdl);
-		gAppleMenu = GetMHandle(MENU_Apple);
-		AddResMenu(gAppleMenu, 'DRVR');
-		gFileMenu = GetMHandle(MENU_File);
-		gEditMenu = GetMHandle(MENU_Edit);
-		gTestMenu = GetMHandle(MENU_Test);
-		gCurrentBusMenu = GetMHandle(MENU_CurrentBus);
-		gCurrentTargetMenu = GetMHandle(MENU_CurrentTarget);
-		gCurrentLUNMenu = GetMHandle(MENU_CurrentLUN);
+		gAppleMenu = GetMenuHandle(MENU_Apple);
+		AppendResMenu(gAppleMenu, 'DRVR');
+		gFileMenu = GetMenuHandle(MENU_File);
+		gEditMenu = GetMenuHandle(MENU_Edit);
+		gTestMenu = GetMenuHandle(MENU_Test);
+		gCurrentBusMenu = GetMenuHandle(MENU_CurrentBus);
+		gCurrentTargetMenu = GetMenuHandle(MENU_CurrentTarget);
+		gCurrentLUNMenu = GetMenuHandle(MENU_CurrentLUN);
 		DrawMenuBar();
 		gUpdateMenusNeeded = TRUE;
 }
@@ -663,7 +655,7 @@ DoAbout()
 		ShowWindow(dialog);
 		SetPort(dialog);
 		ModalDialog(NULL, &item);
-		DisposDialog(dialog);
+		DisposeDialog(dialog);
 		SetPort(savePort);
 }
 

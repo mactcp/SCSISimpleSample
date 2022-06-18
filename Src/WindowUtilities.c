@@ -42,7 +42,7 @@ void								MyDrawGrowIcon(
 		WindowPtr						theWindow
 	);
 
-#include <GestaltEqu.h>
+#include <Gestalt.h>
 
 #ifndef topLeft
 #define topLeft(r)	(((Point *) &(r))[0])

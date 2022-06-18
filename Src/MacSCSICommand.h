@@ -5,7 +5,7 @@
 #ifndef __MacSCSICommand__
 #define __MacSCSICommand__
 
-#include <stddef.h>
+//#include <stddef.h>
 /*
  * Include the O.S. files in a specific order to make sure that we have
  * a definition for the _SCSIAtomic trap.

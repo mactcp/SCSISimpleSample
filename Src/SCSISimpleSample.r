@@ -208,7 +208,8 @@ resource 'DLOG' (DLOG_About, "About SCSI Scan Bus") {
 	noGoAway,
 	0x0,
 	DLOG_About,
-	""
+	"",
+	centerMainScreen
 };
 
 resource 'DITL' (DLOG_About, "About SCSI Scan Bus") {

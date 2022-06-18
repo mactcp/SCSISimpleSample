@@ -68,7 +68,7 @@
  *	paramErr		Could not determine the command length.
  *	scsi...			Other error
  */
-#include <GestaltEqu.h>
+#include <Gestalt.h>
 #include <Memory.h>
 #include <Events.h>
 #include <Errors.h>

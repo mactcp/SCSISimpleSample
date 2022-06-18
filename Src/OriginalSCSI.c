@@ -80,7 +80,7 @@
  */
 #include <scsi.h>
 #include <Errors.h>
-#include <GestaltEqu.h>
+#include <Gestalt.h>
 #include <Memory.h>
 #include <Events.h>
 #include "MacSCSICommand.h"

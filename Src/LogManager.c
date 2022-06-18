@@ -73,7 +73,7 @@ static const char		endOfLine[1] = { 0x0D };	/* <CR>			*/
 #ifndef pstrcpy
 #define pstrcpy(dst, src) do {							\
 		StringPtr	_src = (src);						\
-		BlockMove(_src, dst, _src[0] + 1);				\
+		BlockMoveData(_src, dst, _src[0] + 1);				\
 	} while (0)
 #endif
 /*
@@ -86,7 +86,7 @@ static const char		endOfLine[1] = { 0x0D };	/* <CR>			*/
 		short			_len;							\
 		_len = 255 - _dst[0];							\
 		if (_len > _src[0]) _len = _src[0];				\
-		BlockMove(&_src[1], &_dst[1] + _dst[0], _len);	\
+		BlockMoveData(&_src[1], &_dst[1] + _dst[0], _len);	\
 		_dst[0] += _len;								\
 	} while (0)
 #endif
@@ -113,6 +113,8 @@ static StringHandle					GetLogStringHandle(
 #define IS_COLOR(port)	(((((CGrafPtr) (port))->portVersion) & 0xC000) != 0)
 #define COLOR_LIST		(IS_COLOR(LIST.port))
 
+#ifdef __powerc
+#else
 /*
  * This code sequence is copied into the ListProc handle. It is designed so we
  * don't have to flush the instruction and data caches. Note that this must
@@ -124,6 +126,7 @@ static const short gDummyLDEF[] = {
 		0x4ED0,				/*		jmp		a0 					*/
 		0x0000, 0x0000		/*		dc.l	<Drawing Proc here>	*/
 };
+#endif
 
 static pascal void
 LogListDefProc(
@@ -158,7 +161,11 @@ CreateLog(
 		Handle						drawProcHdl;
 		LogInfoRecord				logInfo;
 		Handle						logInfoHdl;
+#ifdef __powerc
+		ListDefUPP				drawProcPtr;
+#else
 		ProcPtr						listProcPtr;
+#endif
 		short						horizontalMax;
 		
 		logInfoHdl = NULL;
@@ -222,19 +229,27 @@ CreateLog(
 		LIST.userHandle = (Handle) logInfoHdl;
 		HSCROLL = LIST.hScroll;						/* Grab horizontal scroller	*/
 		LIST.hScroll = NULL;						/* Remove it from the list	*/
-		SetCRefCon(HSCROLL, (long) logListHandle);	/* Link scrollbar to list	*/
+		SetControlReference(HSCROLL, (long) logListHandle);	/* Link scrollbar to list	*/
+#ifdef __powerc
+		drawProcPtr = NewListDefUPP(LogListDefProc);
+		status = PtrToHand((Ptr)drawProcPtr, &drawProcHdl, GetPtrSize((Ptr)drawProcPtr));
+		DisposeListDefUPP(drawProcPtr);
+		if (status != noErr)
+			goto failure;
+#else
 		status = PtrToHand(gDummyLDEF, &drawProcHdl, sizeof gDummyLDEF);
 		if (status != noErr)
 			goto failure;
 		listProcPtr = (ProcPtr) LogListDefProc;
 		BlockMove(&listProcPtr, &((short *) *drawProcHdl)[3], sizeof listProcPtr);
+#endif
 		LIST.listDefProc = drawProcHdl;
 		horizontalMax = kMaxHorizontalScroll - width((**HSCROLL).contrlRect);
 		if (horizontalMax < 0)
 			horizontalMax = 0;
-		SetCtlMin(HSCROLL, 0);
-		SetCtlMax(HSCROLL, horizontalMax);
-		SetCtlValue(HSCROLL, 0);
+		SetControlMinimum(HSCROLL, 0);
+		SetControlMaximum(HSCROLL, horizontalMax);
+		SetControlValue(HSCROLL, 0);
 		HiliteControl(
 			HSCROLL,
 			(horizontalMax == 0) ? kDisabledControl : kActiveControl
@@ -446,7 +461,7 @@ SizeLog(
 			horizontalMax = kMaxHorizontalScroll - width((**HSCROLL).contrlRect);
 			if (horizontalMax < 0)
 				horizontalMax = 0;
-			SetCtlMax(HSCROLL, horizontalMax);
+			SetControlMaximum(HSCROLL, horizontalMax);
 			HiliteControl(
 				HSCROLL,
 				(horizontalMax == 0) ? kDisabledControl : kActiveControl
@@ -488,7 +503,7 @@ DoClickInLog(
 			if (PtInRect(mousePt, &(**HSCROLL).contrlRect)) {
 				part = FindControl(mousePt, (**HSCROLL).contrlOwner, &theControl);
 				if (part >= 0 && theControl == HSCROLL) {
-					if (part == inThumb) {
+					if (part == kControlIndicatorPart) {
 						if (TrackControl(theControl, mousePt, NULL))
 							ScrollLogList(theControl);
 					}
@@ -566,12 +581,12 @@ DisplayLogString(
 			 */
 			theRow = LIST.dataBounds.bottom;
 			scrollAtBottom =
-				(GetCtlValue(LIST.vScroll) == GetCtlMax(LIST.vScroll));
+				(GetControlValue(LIST.vScroll) == GetControlMaximum(LIST.vScroll));
 			if (theRow >= LOGINFO.logLines)
 				LDelRow(1, 0, logListHandle);
 			if (AddStringToList(logListHandle, theString) == noErr) {
 				if (scrollAtBottom)
-					LScroll(0, LIST.dataBounds.bottom - GetCtlValue(LIST.vScroll), logListHandle);
+					LScroll(0, LIST.dataBounds.bottom - GetControlValue(LIST.vScroll), logListHandle);
 				if (LOGINFO.logFileRefNum != 0 && LOGINFO.logFileStatus == noErr)
 					WriteLogLine(logListHandle, theString);
 			}
@@ -614,13 +629,13 @@ ScrollLogAction(
 		
 		delta = (width((**theControl).contrlRect) * 7) / 8;
 		switch (partcode) {
-		case inUpButton:	delta = -CharWidth('M');	break;
-		case inPageUp:		delta = -(delta);			break;		
-		case inDownButton:	delta = CharWidth('M');		break;
-		case inPageDown:	/* All set */				break;
+		case kControlUpButtonPart:	delta = -CharWidth('M');	break;
+		case kControlPageUpPart:		delta = -(delta);			break;		
+		case kControlDownButtonPart:	delta = CharWidth('M');		break;
+		case kControlPageDownPart:	/* All set */				break;
 		default:			return;		/* Mouse exited control	*/
 		}
-		SetCtlValue(theControl, GetCtlValue(theControl) + delta);
+		SetControlValue(theControl, GetControlValue(theControl) + delta);
 		ScrollLogList(theControl);
 }
 
@@ -639,14 +654,14 @@ ScrollLogList(
 		RgnHandle						updateRgn;
 		Rect							viewRect;
 		
-		logListHandle = (ListHandle) GetCRefCon(theControl);
+		logListHandle = (ListHandle) GetControlReference(theControl);
 		/*
 		 * LIST.indent.h is negative when the cell is scrolled left. Get the
 		 * amount it's currently scrolled (as a positive value) and set delta
 		 * to the amount that must be scrolled. Delta will be positive to
 		 * scroll right (which means that the scrollbar has moved left).
 		 */
-		delta = kZeroIndent - LIST.indent.h - GetCtlValue(theControl);
+		delta = kZeroIndent - LIST.indent.h - GetControlValue(theControl);
 		if (delta != 0) {
 			/*
 			 * We need to scroll the list cells. Get a clip rectangle so the
@@ -709,7 +724,7 @@ LogListDefProc(
 			case lDrawMsg:
 				EraseRect(listRect);
 				if (listDataLen == sizeof stringHandle) {
-					BlockMove(
+					BlockMoveData(
 						(*LIST.cells) + listDataOffset,
 						&stringHandle,
 						sizeof stringHandle
@@ -1311,7 +1326,7 @@ exit:	SetPort(savePort);
 		if (printIsOpen)
 			PrClose();
 		if (ourPrintHandle && hPrint != NULL)
-			DisposHandle((Handle) hPrint);
+			DisposeHandle((Handle) hPrint);
 		return (status);
 }
 

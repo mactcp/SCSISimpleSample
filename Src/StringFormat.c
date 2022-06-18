@@ -172,7 +172,7 @@ AppendOSType(
 		register short			i;
 		register unsigned char	c;
 		
-		BlockMove(&datum, value, sizeof (OSType));
+		BlockMoveData(&datum, value, sizeof (OSType));
 		AppendChar(result, '\'');
 		for (i = 0; i < sizeof (OSType); i++) {
 			c = value[i];
